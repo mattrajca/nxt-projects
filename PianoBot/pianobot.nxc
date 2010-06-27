@@ -1,0 +1,92 @@
+struct Note {
+	// The 'value' is different from the typical MIDI range of 1-127 since PianoBot can't hit black keys
+	// To find the value: 7 * OCTAVE_NUMBER + NOTE_NUMBER
+	// NOTE_NUMBER ranges from 1-7 (inclusive), with 1 being a 'C'
+	byte value;
+	
+	// The duration is specified in milliseconds
+	unsigned int duration;
+};
+
+Note MakeNote (byte value, unsigned int duration) {
+	Note newNote;
+	newNote.value = value;
+	newNote.duration = duration;
+	
+	return newNote;
+}
+
+// Before playing any song, the robot's "finger" should be lined up with the middle-C
+byte currentNote = 22; // The note value for the middle-C (C3) is 22
+
+void moveToKey (int noteVal) {
+	int delta = noteVal - currentNote;
+	
+	const int degPerKey = 46;
+	RotateMotorPID(OUT_BC, 40, degPerKey * delta * -1, 0, 50, 90);
+
+	currentNote = noteVal;
+}
+
+task releaseKey() {
+	RotateMotorPID(OUT_A, 45, -27, 40, 40, 0);
+}
+
+void hitKey (int noteDuration) {
+	RotateMotorPID(OUT_A, 45, 27, 40, 40, 0);
+	Wait(noteDuration);
+	StartTask(releaseKey);
+}
+
+void playErrorTone() {
+	PlayTone(440, 250);
+	Wait(250);
+	PlayTone(496, 250);
+	Wait(250);
+	PlayTone(440, 250);
+	Wait(250);
+}
+
+const string FILE_TO_RUN = "twinkle.sng";
+
+task main() {	
+	unsigned int fSize = 0;
+	byte fHandle = 0;
+	
+	if (OpenFileRead(FILE_TO_RUN, fSize, fHandle) != NO_ERR) {
+		playErrorTone();
+		StopAllTasks();
+	}
+	
+	string noteString;
+	
+	while (ReadLnString(fHandle, noteString) == NO_ERR) {
+		int noteVal = 0;
+		int noteDur = 0;
+		
+		string currNum = "";
+		
+		for (int n = 0; n < StrLen(noteString); n++) {
+			string v = SubStr(noteString, n, 1);
+		
+			if (v != " ") {
+				currNum = StrCat(currNum, v);
+			}
+			else {
+				if (noteVal == 0) {
+					noteVal = StrToNum(currNum);
+				}
+				else if (noteDur == 0) {
+					noteDur = StrToNum(currNum);
+				}
+				
+				currNum = "";
+			}
+		}
+		
+		moveToKey(noteVal);
+		hitKey(noteDur);
+	}
+	
+	Off(OUT_ABC);
+}
