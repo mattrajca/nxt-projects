@@ -1,13 +1,13 @@
-#define DEG_PER_KEY 46
+#define DEG_PER_KEY 47
 #define MOVE_POWER 40
 
-#define HIT_ANGLE 27
-#define HIT_POWER 45
+#define HIT_RELEASE_ANGLE -30
+#define HIT_POWER 35
 
 #define MIDDLE_C 22
 
 struct Note {
-    // The 'value' is different from the typical MIDI range of 1-127 since PianoBot can't hit black keys
+    // The note value is different from the typical MIDI range of 1-127 since PianoBot can't hit black keys
     // To find the value: 7 * OCTAVE_NUMBER + NOTE_NUMBER
     // NOTE_NUMBER ranges from 1-7 (inclusive), with 1 being a 'C'
     unsigned int value;
@@ -22,19 +22,33 @@ unsigned int currentNote = MIDDLE_C;
 void moveToKey (const unsigned int noteVal) {
     int delta = noteVal - currentNote;
     
-    RotateMotorPID(OUT_BC, MOVE_POWER, DEG_PER_KEY * delta * -1, 0, 50, 90);
+    RotateMotorPID(OUT_BC, MOVE_POWER, DEG_PER_KEY * delta * -1, 40, 50, 90);
 
     currentNote = noteVal;
 }
 
-task releaseKey() {
-    RotateMotorPID(OUT_A, HIT_POWER, -HIT_ANGLE, 40, 40, 0);
+void waitForMotorOverload (const byte ports) {
+    while (true) {
+        long currCount = MotorRotationCount(ports);
+        
+        Wait(30);
+        
+        if (currCount == MotorRotationCount(ports)) {
+            break;
+        }
+    }
 }
 
 void hitKey (const unsigned int noteDuration) {
-    RotateMotorPID(OUT_A, HIT_POWER, HIT_ANGLE, 40, 40, 0);
+    ResetRotationCount(OUT_A);
+    
+    OnFwd(OUT_A, HIT_POWER);
+    
+    waitForMotorOverload(OUT_A);
+    
     Wait(noteDuration);
-    StartTask(releaseKey);
+    
+    RotateMotorPID(OUT_A, HIT_POWER, HIT_RELEASE_ANGLE, 20, 40, 50);
 }
 
 Note NoteWithLine (const string line) {
@@ -84,6 +98,8 @@ task main() {
         moveToKey(note.value);
         hitKey(note.duration);
     }
+    
+    Wait(50);
     
     CloseFile(fHandle);
     Off(OUT_ABC);
