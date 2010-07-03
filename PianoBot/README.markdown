@@ -24,4 +24,4 @@ Songs themselves are stored in separate 'sng' files. Each line in a song file co
 Limitations
 -----------
 
-The accuracy of the servo motors depends on the NXT's battery life, the surface they are operating on, and their power set-point. I made an effort to make playback as accurate as possible, but if anyone has any ideas on improving this furthermore, please drop me an email.
+The precision of the servo motors depends on the NXT's battery life, the surface they are operating on, and their power set-point. I made an effort to make playback as accurate as possible, but if anyone has any ideas on improving this furthermore, please drop me an email.
