@@ -1,15 +1,17 @@
 #define FINGER_PORT OUT_A
 #define MOTOR_PORTS OUT_BC
 
-#define DEG_PER_KEY 46
-#define MOVE_POWER 50
-
-#define HIT_RELEASE_ANGLE -30
-#define HIT_RELEASE_POWER 50
-
-#define HIT_POWER 35
-
 #define MIDDLE_C 22
+
+#define DEG_PER_KEY 46
+
+// Constants defined below should be adjusted for different surfaces and battery levels
+
+#define HIT_POWER 30
+#define HIT_RELEASE_POWER 30
+#define MOVE_POWER 30
+
+#define HIT_RELEASE_ANGLE -40
 
 struct Note {
     // The note value is different from the typical MIDI range of 1-127
@@ -29,7 +31,7 @@ mutex fingerMotion;
 void moveToKey (const byte noteVal) {
     int delta = noteVal - currentNote;
     
-    RotateMotorExPID(MOTOR_PORTS, MOVE_POWER, DEG_PER_KEY * delta * -1, 0, true, true, 40, 50, 90);
+    RotateMotorExPID(MOTOR_PORTS, MOVE_POWER, DEG_PER_KEY * delta * -1, 0, true, true, 20, 50, 90);
     
     currentNote = noteVal;
 }
