@@ -1,7 +1,7 @@
 PianoBot
 ========
 
-A simple NXT robot that can play a given tune on a piano keyboard. Watch a [video](http://vimeo.com/12883468) of it in action!
+A simple NXT robot that can play a given tune on a piano keyboard. Watch a [video]() of it in action!
 
 Building Instructions
 ---------------------
@@ -14,13 +14,14 @@ Building Instructions
 Usage
 -----
 
-Before playing any song, make sure the robot's "finger" is lined up with the middle-C. The "finger's" tip should be approximately 0.5 cm above the surface of the keyboard.
+Before playing any song, make sure the robot's "finger" is lined up with the middle-C.
 
 Song Files
 ----------
-Songs themselves are stored in separate 'sng' files. Each line in a song file consists of a note value and a duration (in milliseconds). These are separated by a space. Each line is terminated by a space as well, and the file is terminated with an empty line.
+
+Songs themselves are stored in separate 'sng' files. Each line in a song file consists of a note value (> 1, see pianobot.nxc) and a duration (in milliseconds). These are separated by a space. Each line is terminated by a space as well, and the file is terminated with an empty line. To include a "rest", use a note value of 0.
 
 Limitations
 -----------
 
-Motor rotations can be imprecise as the motors tend to overshoot the actual angle given. This can lead to wrong notes being played at times. Tweaking the values in calls to `RotateMotorPID` can minimize the issue, but it will still persist. If anyone has any ideas on making PianoBot's playing more accurate, please drop me an email.
+Motor rotations can be imprecise as the motors tend to overshoot the actual angle given. I made an effort to make playback as accurate as possible, but if anyone has any ideas on improving this furthermore, please drop me an email.

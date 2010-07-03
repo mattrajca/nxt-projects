@@ -1,29 +1,36 @@
-#define DEG_PER_KEY 47
-#define MOVE_POWER 40
+#define FINGER_PORT OUT_A
+#define MOTOR_PORTS OUT_BC
+
+#define DEG_PER_KEY 46
+#define MOVE_POWER 50
 
 #define HIT_RELEASE_ANGLE -30
+#define HIT_RELEASE_POWER 50
+
 #define HIT_POWER 35
 
 #define MIDDLE_C 22
 
 struct Note {
-    // The note value is different from the typical MIDI range of 1-127 since PianoBot can't hit black keys
+    // The note value is different from the typical MIDI range of 1-127
+    // It should always be greater than 0
     // To find the value: 7 * OCTAVE_NUMBER + NOTE_NUMBER
     // NOTE_NUMBER ranges from 1-7 (inclusive), with 1 being a 'C'
-    unsigned int value;
+    byte value;
     
     // The duration is specified in milliseconds
     unsigned int duration;
 };
 
 // Before playing any song, the robot's "finger" should be lined up with the middle-C
-unsigned int currentNote = MIDDLE_C;
+byte currentNote = MIDDLE_C;
+mutex fingerMotion;
 
-void moveToKey (const unsigned int noteVal) {
+void moveToKey (const byte noteVal) {
     int delta = noteVal - currentNote;
     
-    RotateMotorPID(OUT_BC, MOVE_POWER, DEG_PER_KEY * delta * -1, 40, 50, 90);
-
+    RotateMotorExPID(MOTOR_PORTS, MOVE_POWER, DEG_PER_KEY * delta * -1, 0, true, true, 40, 50, 90);
+    
     currentNote = noteVal;
 }
 
@@ -31,7 +38,7 @@ void waitForMotorOverload (const byte ports) {
     while (true) {
         long currCount = MotorRotationCount(ports);
         
-        Wait(30);
+        Wait(40);
         
         if (currCount == MotorRotationCount(ports)) {
             break;
@@ -39,25 +46,36 @@ void waitForMotorOverload (const byte ports) {
     }
 }
 
+task releaseKey() {
+    Acquire(fingerMotion);
+    RotateMotorPID(FINGER_PORT, HIT_RELEASE_POWER, HIT_RELEASE_ANGLE, 40, 50, 90);
+    Release(fingerMotion);
+}
+
 void hitKey (const unsigned int noteDuration) {
-    ResetRotationCount(OUT_A);
+    Acquire(fingerMotion);
     
-    OnFwd(OUT_A, HIT_POWER);
+    ResetRotationCount(FINGER_PORT);
+    OnFwd(FINGER_PORT, HIT_POWER);
+    waitForMotorOverload(FINGER_PORT);
     
-    waitForMotorOverload(OUT_A);
+    Release(fingerMotion);
     
     Wait(noteDuration);
     
-    RotateMotorPID(OUT_A, HIT_POWER, HIT_RELEASE_ANGLE, 20, 40, 50);
+    start releaseKey;
+    
+    // Give the finger some time to lift itself before moving
+    Wait(150);
 }
 
 Note NoteWithLine (const string line) {
     Note newNote;
     
     string currNum = "";
-    int numCount = 0;
+    unsigned int numCount = 0;
     
-    for (int n = 0; n < StrLen(line); n++) {
+    for (unsigned int n = 0; n < StrLen(line); n++) {
         string v = SubStr(line, n, 1);
         
         if (v != " ") {
@@ -79,28 +97,48 @@ Note NoteWithLine (const string line) {
     return newNote;
 }
 
-// CHANGE THIS TO PLAY A DIFFERENT SONG
-const string FILE_TO_RUN = "twinkle.sng";
-
-task main() {   
+unsigned int playSong (const string filename) {
     unsigned int fSize = 0;
     byte fHandle = 0;
+    unsigned int err = NO_ERR;
     
-    if (OpenFileRead(FILE_TO_RUN, fSize, fHandle) != NO_ERR) {
-        StopAllTasks();
+    err = OpenFileRead(filename, fSize, fHandle);
+    
+    if (err != NO_ERR) {
+        return err;
     }
     
-    string noteString;
+    string lineString;
     
-    while (ReadLnString(fHandle, noteString) == NO_ERR) {
-        Note note = NoteWithLine(noteString);
+    while (ReadLnString(fHandle, lineString) == NO_ERR) {
+        Note note = NoteWithLine(lineString);
         
-        moveToKey(note.value);
-        hitKey(note.duration);
+        if (note.value == 0) {
+            Wait(note.duration); // this is simply a rest
+        }
+        else {
+            moveToKey(note.value);
+            hitKey(note.duration);
+        }
     }
-    
-    Wait(50);
     
     CloseFile(fHandle);
+    
+    return NO_ERR;
+}
+
+void terminate() {
+    Wait(100);
     Off(OUT_ABC);
+    Wait(100);
+}
+
+task main() {
+    if (playSong("twinkle.sng") != NO_ERR) {
+        goto exit;
+    }
+    
+    terminate();
+    
+  exit:
 }
