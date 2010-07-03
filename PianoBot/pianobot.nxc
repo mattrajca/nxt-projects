@@ -97,15 +97,12 @@ Note NoteWithLine (const string line) {
     return newNote;
 }
 
-unsigned int playSong (const string filename) {
+bool playSong (const string filename) {
     unsigned int fSize = 0;
     byte fHandle = 0;
-    unsigned int err = NO_ERR;
-    
-    err = OpenFileRead(filename, fSize, fHandle);
-    
-    if (err != NO_ERR) {
-        return err;
+
+    if (OpenFileRead(filename, fSize, fHandle) != NO_ERR) {
+        return false;
     }
     
     string lineString;
@@ -124,7 +121,7 @@ unsigned int playSong (const string filename) {
     
     CloseFile(fHandle);
     
-    return NO_ERR;
+    return true;
 }
 
 void terminate() {
@@ -133,8 +130,10 @@ void terminate() {
     Wait(100);
 }
 
+const string FILE_TO_PLAY = "twinkle.sng";
+
 task main() {
-    if (playSong("twinkle.sng") != NO_ERR) {
+    if (!playSong(FILE_TO_PLAY)) {
         goto exit;
     }
     
